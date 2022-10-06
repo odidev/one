@@ -23,3 +23,46 @@ jobs:
       # Runs a single command using the runners shell
       - name: Run Smoke Tests
         run: $GITHUB_WORKSPACE/share/smoke_tests/smoke_tests.sh
+        
+  test_arm64_self_host: 
+     runs-on: self-hosted
+     steps:
+      - uses: actions/checkout@v2
+      - name: Setup Ruby
+        run: |
+           sudo apt-get update -y
+           sudo apt install -y build-essential
+           sudo curl -sL https://deb.nodesource.com/setup_14.x | sudo bash -
+           sudo apt install -y nodejs
+           sudo apt-get -y install ruby-full
+      - name: Install Rubocop
+        run: |
+           sudo gem install rubocop
+           sudo npm install eslint-plugin-import@latest --save-dev
+           sudo npm i -D eslint @typescript-eslint/eslint-plugin
+      - name: Run smoke_test_arm64
+        run: |
+           sudo ./share/smoke_tests/smoke_tests.sh
+           
+           
+  test_arm64_QEMU: 
+     runs-on: ubuntu-latest
+     steps:
+      - uses: actions/checkout@v2
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+      - name: Install and Run tests
+        run: |
+               docker run --rm -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+               arm64v8/ubuntu:20.04 \
+               bash -exc 'apt-get update && apt-get -y install curl git && \
+               ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && export DEBIAN_FRONTEND=noninteractive && apt-get install -y tzdata && dpkg-reconfigure --frontend noninteractive tzdata && \
+               apt install -y build-essential && \
+               curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+               apt install -y nodejs && \
+               apt-get -y install ruby-full && \
+               gem install rubocop && \
+               npm install eslint-plugin-import@latest --save-dev && \
+               npm i -D eslint @typescript-eslint/eslint-plugin && \
+               ./share/smoke_tests/smoke_tests.sh'
